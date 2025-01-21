@@ -222,7 +222,7 @@ df<-do.call("cbind",lapply(1:length(modelList),function(i){
   
   tmp.test<-predictExternal(testData = t(test[[i]][,rownames(baTest)]),
                             model = modelList[[i]]$model,
-                            orig.values = orig.data,
+                            realValues = orig.data,
                             positiveClass = "pLN")$stats
   x<-tmp.test$Score
   names(x)<-tmp.test$Metric
