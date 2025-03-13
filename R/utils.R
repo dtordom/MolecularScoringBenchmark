@@ -145,107 +145,6 @@ data_summary <- function(data, varname, groupnames){
 }
 ##··············································································
 
-##···································································applyGSVA()
-## Get GSVA scores by sample
-#' @param data Gene expression data.frame
-#' @param exMatrix Gene expression matrix
-#' @param geneSets list of pathways
-#' @param minSize minimum number of genes to select a pathway as suitable
-#' @param kcdf: "Gaussian" for normalized data and "Poisson" for counts
-#' @param internal_n_cores Cores used to parellelize the process
-applyGSVA <- function(exMatrix, geneSets, minSize = 3, kcdf = "Gaussian", internal_n_cores = 1){
-  paramMatrix <- gsvaParam(exMatrix, geneSets, minSize =  minSize, kcdf = kcdf)
-  gsvaMatrix <- gsva(paramMatrix, BPPARAM = MulticoreParam(workers = internal_n_cores))
-  return(gsvaMatrix)
-}
-##··············································································
-
-##··································································applyPlage()
-## Get Plage scores by sample
-#' @param data Gene expression data.frame
-#' @param exMatrix Gene expression matrix
-#' @param geneSets list of pathways
-#' @param minSize minimum number of genes to select a pathway as suitable
-#' @param kcdf: "Gaussian" for normalized data and "Poisson" for counts
-#' @param internal_n_cores Cores used to parellelize the process
-applyPlage <- function(exMatrix, geneSets, minSize = 3, kcdf = "Gaussian", internal_n_cores = 1){
-  paramMatrix <- plageParam(exMatrix, geneSets, minSize =  minSize)
-  plageMatrix <- gsva(paramMatrix, BPPARAM = MulticoreParam(workers = internal_n_cores))
-  return(plageMatrix)
-}
-##··············································································
-
-##·································································applyZscore()
-## Get Zscores by sample
-#' @param exMatrix Gene expression matrix
-#' @param geneSets list of pathways
-#' @param minSize minimum number of genes to select a pathway as suitable
-#' @param internal_n_cores Cores used to parellelize the process
-applyZscore <- function(exMatrix, geneSets, minSize = 3, internal_n_cores = 1){
-  paramMatrix <- zscoreParam(exMatrix, geneSets, minSize =  minSize)
-  ZscoreMatrix <- gsva(paramMatrix, BPPARAM = MulticoreParam(workers = internal_n_cores))
-  #Scale data between -1 and 1
-  #ZscoreMatrix <- ZscoreMatrix / max(abs(ZscoreMatrix))
-  return(ZscoreMatrix)
-}
-##··············································································
-
-##·································································applyssGSEA()
-## Get ssGSEA scores by sample
-#' @param exMatrix Gene expression matrix
-#' @param geneSets list of pathways
-#' @param minSize minimum number of genes to select a pathway as suitable
-#' @param internal_n_cores Cores used to parellelize the process
-applyssGSEA <- function(exMatrix, geneSets, minSize = 3, internal_n_cores = 1){
-  paramMatrix <- ssgseaParam(exMatrix, geneSets, minSize =  minSize)
-  ssGSEAMatrix <- gsva(paramMatrix, BPPARAM = MulticoreParam(workers = internal_n_cores))
-  #Scale data between -1 and 1
-  #ssGSEAMatrix <- ssGSEAMatrix / max(abs(ssGSEAMatrix))
-  return(ssGSEAMatrix)
-}
-##··············································································
-
-##······························································applySingscore()
-## Get Singscores by sample
-#' @param exMatrix Gene expression matrix
-#' @param geneSets list of pathways
-#' @param minSize minimum number of genes to select a pathway as suitable
-#' @param internal_n_cores Cores used to parellelize the process
-applySingscore <- function(exMatrix, geneSets, minSize = 3, internal_n_cores = 1){
-  exMatrixgenes <- rownames(exMatrix)
-  pathways_filtered <- lapply(geneSets, function(pathway) {
-    genes_com <- intersect(pathway, exMatrixgenes)
-    if (length(genes_com) >= minSize) {
-      return(pathway)
-    } else {
-      return(NULL)
-    }
-  })
-  pathways_filtered <- pathways_filtered[!sapply(pathways_filtered, is.null)]
-  geneSets <- pathways_filtered
-  rankMatrix <- rankGenes(exMatrix, tiesMethod = "average")
-  # Save currect options
-  op <- pboptions()
-  # New barr type
-  pboptions(type = "txt", style = 3, char = "=")
-  print("Estimating singscore values")
-  listSign <- suppressWarnings(pblapply(geneSets,
-                                        function(x) simpleScore(rankData = rankMatrix, upSet = x)))
-  # Back to old optiops
-  pboptions(op)
-  listScores <- sapply(listSign, function(x) x$TotalScore)
-  if(is.list(listScores)){
-    pathMatrix <- do.call(rbind, listScores)}
-  else{
-    pathMatrix <- t(listScores)
-  }
-  colnames(pathMatrix) <- colnames(exMatrix)
-  #Escale data between -1 and 1
-  #pathMatrix <- pathMatrix / 0.5
-  return(pathMatrix)
-}
-##··············································································
-
 ##·····································································varTest()
 ## Variance test between groups
 #' @param data Gene expression matrix
@@ -343,22 +242,21 @@ vectSimilarity<-function(x,y,method="euclidean"){
   return(results)
 }
 
-
 ##··············································································
 
-##······································································getGap() 
-## Get Gaps for heatmaps to separe clusters 
-#' @vect numeric ordered vector
-getGap<-function(vect){
-  isum<-0
-  res<-NULL
-  for(i in 1:(length(vect)-1)){
-    isum<-isum+vect[i]
-    res<-c(res,isum)
-  }
-  return(res)
-}
-##··············································································
+#' ##······································································getGap() 
+#' ## Get Gaps for heatmaps to separe clusters 
+#' #' @vect numeric ordered vector
+#' getGap<-function(vect){
+#'   isum<-0
+#'   res<-NULL
+#'   for(i in 1:(length(vect)-1)){
+#'     isum<-isum+vect[i]
+#'     res<-c(res,isum)
+#'   }
+#'   return(res)
+#' }
+#' ##··············································································
 
 ##···································································testAssoc()
 #' @param metadata data.frame with variables in columns, First column: "Group"
