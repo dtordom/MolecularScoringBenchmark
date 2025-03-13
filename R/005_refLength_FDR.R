@@ -11,7 +11,7 @@
 ##······································································· Step 0
 ## Set environment
 
-setwd("D:/Work/BMS/PMPS/PMSPbenchmark")
+setwd("C:/Users/danie/Desktop/WORK/BENCHMARK_25")
 set.seed(1234)
 
 load(paste0(getwd(),"/RData/SCORES.RData"))
@@ -21,11 +21,15 @@ source(paste0(getwd(),"/code/utils.R"))
 check.packages(c("vctrs","stats","stringr","caret","singscore","GSVA","parallel","lsa",
                  "metrica","BiocParallel","pbapply","reshape","ggplot2","ggpubr","psych",
                  "jaccard","NbClust","ConsensusClusterPlus","mclust","decoupleR",
-                 "reshape2","qvalue","ggbreak","pheatmap","pathMED","scales","dplyr"))
+                 "reshape2","qvalue","ggbreak","pheatmap","scales","dplyr"))
+
+## Load pathMED locally
+# devtools::install_local(paste0(getwd(),"/pathMED-main"))
+library("pathMED")
 
 
 colors <- c("GSVA"="#F4A460",
-            "M-score"="#FF6347",
+            "M-Scores"="#FF6347",
             "Z-score"="#A0522D",
             "ssGSEA"="burlywood4",
             "singscore"="rosybrown3",
@@ -45,7 +49,7 @@ colors <- c("GSVA"="#F4A460",
             "norm_WSUM"="plum",
             "corr_WSUM"="#FFB6C1")
 
-methods<-methods[!grepl("corr",methods)]
+# methods<-methods[!grepl("corr",methods)]
 
 ##······································································· Step 1
 ## Q3: Are the scores influenced by the number of genesets tested? 
@@ -63,7 +67,7 @@ PREC<-lapply(PREC,function(dat){
   return(dat)
 })
 
-## Diffent lengths for geneset database
+## Different lengths for geneset database
 sizes<-c(1,2,3,4,5,10,20,30,50,75,100,150,200,400,750,1000)
 sizes.list <- replicate(10, sizes, simplify = FALSE)
 
@@ -85,9 +89,9 @@ Results.gl<-as.data.frame(do.call("rbind",lapply(methods,function(method){
       ## Select 'i' random genesets
       tmp.geneset.i<-tmp.geneset[1:i]
       
-      ncores<-ifelse(method %in% c("M-scores", "MDT", "UDT", "ULM"), 14, 1)
+      ncores<-ifelse(method %in% c("M-Scores", "MDT", "UDT", "ULM"), detectCores()-2, 1)
       labs <- rep("SLE",ncol(tmp.SLE))
-      if(method=="M-score"){ ## Get Mscores also for HC
+      if(method=="M-Scores"){ ## HC is also needed for M-Scores
         dat<-cbind(tmp.SLE,HC.prec)
         labs<-c(labs,rep("Healthy",ncol(HC.prec)))
       }else{
@@ -95,8 +99,8 @@ Results.gl<-as.data.frame(do.call("rbind",lapply(methods,function(method){
       }
       
       tmp.sc<-getScores(inputData=dat, geneSets=tmp.geneset.i, method=method,
-                        labels=labs, cores=ncores, minSize=3,
-                        times = ifelse(grepl("norm",method),100, ifelse(grepl("corr",method),200,2)))
+                        labels=labs, returnHC = FALSE, cores=ncores, minSize=3,
+                        times = ifelse(grepl("norm",method),100,2))
       
       return(as.numeric(tmp.sc[names(tmp.geneset.i)[1],]))
     }))
@@ -203,23 +207,16 @@ hc.tmp<-HC.prec[,sample(1:ncol(HC.prec),100)]
 RD.scores<-lapply(methods,function(method){
   cat(paste0("\nRuning ",method,"\n"))
   
-  if(method=="M-score"){ ## Get Mscores also for HC
-    dat<-cbind(sle.tmp,hc.tmp,hc.tmp)
-    labs<-c(rep("SLE",ncol(sle.tmp)),
-            rep("SLE",ncol(hc.tmp)),
-            rep("Healthy",ncol(hc.tmp)))
-  }else{
-    dat<-cbind(sle.tmp,hc.tmp)
-    labs<-c(rep("SLE",ncol(sle.tmp)),
-            rep("Healthy",ncol(hc.tmp)))
-  }
-  ncores<-ifelse(method %in% c("M-scores", "MDT", "UDT", "ULM"), 14, 1)
+  dat<-cbind(sle.tmp,hc.tmp)
+  labs<-c(rep("SLE",ncol(sle.tmp)),
+          rep("Healthy",ncol(hc.tmp)))
+  
+  ncores<-ifelse(method %in% c("M-Scores", "MDT", "UDT", "ULM"), detectCores()-2, 1)
 
   tmp.scores<-do.call("rbind",lapply(geneset.RD,function(tmp.geneset){
-    tmp.sc<-getScores(inputData=dat, geneSets=tmp.geneset, method = method,
-                     labels = labs,cores = ncores, minSize=3,
-                     times =ifelse(grepl("norm",method),100,
-                                   ifelse(grepl("corr",method),200,2)))
+    tmp.sc<-getScores(inputData=dat, returnHC = TRUE, geneSets=tmp.geneset,
+                      method = method, labels = labs,cores = ncores, minSize=3,
+                     times =ifelse(grepl("norm",method),100,2))
     return(tmp.sc)
   }))
   
@@ -248,7 +245,7 @@ PL<-lapply(1:length(RD.scores),function(i){
   
   DAT<-dat[,colnames(dat) %in% colnames(SLE.prec)]
   
-  if(names(RD.scores)[i]!="M-score"){ 
+  if(names(RD.scores)[i]!="M-Scores"){ 
     ## scale with respect to Healthy controls
     tmp<-do.call("cbind",lapply(1:ncol(DAT),function(x){
       res <- (DAT[,x] - nhv[, "mean"]) / nhv[, "sd"]
@@ -294,5 +291,4 @@ ggarrange(PL[[1]],PL[[2]],PL[[3]],PL[[4]],PL[[5]],PL[[6]],
           PL[[7]],PL[[8]],PL[[9]],PL[[10]],PL[[11]],PL[[12]],
           PL[[13]],PL[[14]],PL[[15]],PL[[16]],PL[[17]],PL[[18]],
           ncol = 6,nrow = 3,common.legend = TRUE,legend = "bottom")
-
 
