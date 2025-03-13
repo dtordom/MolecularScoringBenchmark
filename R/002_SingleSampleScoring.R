@@ -10,27 +10,31 @@
 ##······································································· Step 0
 ## Set environment
 
-setwd("D:/Work/BMS/PMPS/PMSPbenchmark")
+setwd("C:/Users/danie/Desktop/WORK/BENCHMARK_25")
 set.seed(1234)
 
 source(paste0(getwd(),"/code/utils.R"))
 
 check.packages(c("vctrs","stats","stringr","GSVA","singscore","BiocParallel",
                  "car","pbapply","parallel","limma","decoupleR","reshape2",
-                 "pathMED","doMC"))
+                 #"pathMED",
+                 "doMC"))
+
+## Load pathMED locally
+# devtools::install_local(paste0(getwd(),"/pathMED-main"))
+library("pathMED")
 
 ## Load Datasets
-load("D:/Work/BMS/PMPS/PMSPbenchmark/RData/PRECISESADS.RData")
-load("D:/Work/BMS/PMPS/PMSPbenchmark/RData/LNDatasets.RData")
+load(paste0(getwd(),"/RData/PRECISESADS.RData"))
+load(paste0(getwd(),"/RData/LNDatasets.RData"))
 
 
 ##······································································· Step 1
 ## Preparing data for scoring
 
-methods<-c("GSVA","M-score","ssGSEA","singscore","Z-score","Plage",
-           "AUCell","MDT","MLM","ORA","UDT","ULM",
-           "FGSEA","norm_FGSEA","WMEAN","norm_WMEAN","corr_WMEAN",
-           "WSUM","norm_WSUM","corr_WSUM")
+methods<-c("GSVA","M-Scores","ssGSEA","singscore","Z-score","Plage","AUCell",
+           "MDT","MLM","ORA","UDT","ULM","FGSEA","norm_FGSEA","WMEAN",
+           "norm_WMEAN","WSUM","norm_WSUM")
 
 
 ## list of gene-expression from different studies
@@ -46,41 +50,73 @@ ref.data<-list("ln1"=list("expData"=cbind(HC.ln1,SLE.ln1),
                            "labels"=c(rep("Healthy",ncol(HC.prec)),rep("SLE",ncol(SLE.prec)))) )
 
 ## Using SLEDiseasome 
-load("D:/Work/BMS/PMPS/PMSPbenchmark/RData/SLEDiseasome.RData")
+geneset.DB<-readRDS(paste0(getwd(),"/RData/SLEDiseasome_db.rds"))
 
 
 ##······································································· Step 2
 ## Get Scores
 
-SCORES<-lapply(ref.data,function(set){
+
+# res <- readRDS("C:/Users/danie/Desktop/WORK/BENCHMARK_25/RData/tmpRes.rds")
+# SCORES <- readRDS("C:/Users/danie/Desktop/WORK/BENCHMARK_25/RData/tmpScores.rds")
+
+SCORES<-list()
+for(i in 1:length(ref.data)){
+  set<-ref.data[[i]]
   
-  res<-lapply(methods,function(method){
+  res<-list()
+  for(method in methods){
+    
     cat(paste0("\nRuning ",method,"\n"))
     dat<-set$expData
     labs<-set$labels
+    dat<-dat[!is.na(rownames(dat)) & !rownames(dat)=="",]
     
-    if(method=="M-score"){ ## Get Mscores also for HC
-      hc<-dat[,labs=="Healthy"]
-      colnames(hc)<-paste0(colnames(hc),"_HC")
-      dat<-cbind(dat,hc)
-      labs<-c(labs,rep("SLE",ncol(hc)))
-    }
-    
-    ncores<-ifelse(method %in% c("M-scores", "MDT", "UDT", "ULM"), 12, 1)
+    ncores<-ifelse(method %in% c("M-Scores", "MDT", "UDT", "ULM"), 14, 1)
     
     tmp.scores<-getScores(inputData=dat, geneSets=geneset.DB, method = method,
-                          labels = labs,cores = ncores, minSize=3,
-                          times =ifelse(grepl("norm",method),100,
-                                        ifelse(grepl("corr",method),200,2)))
-    
-    return(tmp.scores)
-  })
+                          labels = labs, returnHC = TRUE, cores = ncores, 
+                           minSize=3, times =ifelse(grepl("norm",method),100,2))
+    res[[method]]<-tmp.scores
+    saveRDS(res,"C:/Users/danie/Desktop/WORK/BENCHMARK_25/RData/tmpRes.rds")
+  }
   
-  names(res)<-methods
-  return(res)
-})
-names(SCORES)<-names(ref.data)
+  SCORES[[names(ref.data)[i]]]<-res
+  saveRDS(SCORES,"C:/Users/danie/Desktop/WORK/BENCHMARK_25/RData/tmpScores.rds")
+  
+}
+
+# SCORES<-lapply(ref.data,function(set){
+#   
+#   res<-lapply(methods,function(method){
+#     cat(paste0("\nRuning ",method,"\n"))
+#     dat<-set$expData
+#     labs<-set$labels
+#     
+#     if(method=="M-score"){ ## Get Mscores also for HC
+#       hc<-dat[,labs=="Healthy"]
+#       colnames(hc)<-paste0(colnames(hc),"_HC")
+#       dat<-cbind(dat,hc)
+#       labs<-c(labs,rep("SLE",ncol(hc)))
+#     }
+#     
+#     ncores<-ifelse(method %in% c("M-Scores", "MDT", "UDT", "ULM"), 12, 1)
+#     
+#     tmp.scores<-getScores(inputData=dat, geneSets=geneset.DB, method = method,
+#                           labels = labs,cores = ncores, minSize=3,
+#                           times =ifelse(grepl("norm",method),100,
+#                                         ifelse(grepl("corr",method),200,2)))
+#     
+#     return(tmp.scores)
+#   })
+#   
+#   names(res)<-methods
+#   return(res)
+# })
+# names(SCORES)<-names(ref.data)
 
 ## Remove all not needed objects and save
-save.image("D:/Work/BMS/PMPS/PMSPbenchmark/RData/SCORES.RData")
+
+
+save.image(paste0(getwd(),"/RData/SCORES.RData"))
 
