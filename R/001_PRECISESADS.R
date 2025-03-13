@@ -14,7 +14,7 @@
 ##······································································· Step 0
 ## Set environment ----
 
-setwd("D:/Work/BMS/PMPS/PMSPbenchmark")
+setwd("C:/Users/danie/Desktop/WORK/BENCHMARK_25")
 set.seed(1234)
 source(paste0(getwd(),"/code/utils.R"))
 
@@ -226,4 +226,6 @@ names(clin.prec)[4]<-"cells"
 rm(list=setdiff(ls(),c("clin.prec","HC.prec","SLE.prec")))
 
 # "/mnt/data/PMPS_Datasets/PRECISESADS.RData"
-save.image("D:/Work/BMS/PMPS/PMSPbenchmark/RData/PRECISESADS.RData")
+save.image(paste0(getwd(),"/RData/PRECISESADS.RData"))
+
+
