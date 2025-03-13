@@ -10,7 +10,7 @@
 ##······································································· Step 0
 ## Set environment
 
-setwd("D:/Work/BMS/PMPS/PMSPbenchmark")
+setwd("C:/Users/danie/Desktop/WORK/BENCHMARK_25")
 set.seed(1234)
 
 load(paste0(getwd(),"/RData/SCORES.RData"))
@@ -20,11 +20,14 @@ source(paste0(getwd(),"/code/utils.R"))
 check.packages(c("vctrs","stats","stringr","caret","singscore","GSVA","parallel",
                  "lsa","metrica","BiocParallel","pbapply","reshape","ggplot2",
                  "ggpubr","psych","jaccard","decoupleR","reshape2","qvalue",
-                 "ggbreak","pheatmap","pathMED","scales","dplyr","DExMA"))
+                 "ggbreak","pheatmap","scales","dplyr","DExMA"))
 
+## Load pathMED locally
+# devtools::install_local(paste0(getwd(),"/pathMED-main"))
+library("pathMED")
 
 colors <- c("GSVA"="#F4A460",
-            "M-score"="#FF6347",
+            "M-Scores"="#FF6347",
             "Z-score"="#A0522D",
             "ssGSEA"="burlywood4",
             "singscore"="rosybrown3",
@@ -44,14 +47,14 @@ colors <- c("GSVA"="#F4A460",
             "norm_WSUM"="plum",
             "corr_WSUM"="#FFB6C1")
 
-methods<-methods[!grepl("corr",methods)]
+# methods<-methods[!grepl("corr",methods)]
 
 clin.ln1$group<-ifelse(clin.ln1$NeprBX=="Proliferative","pLN","NoLN")
 clin.ln2$group<-ifelse(clin.ln2$LN=="YES","pLN","NoLN")
 clin.ln3$group<-ifelse(clin.ln3$pLN=="YES","pLN","NoLN")
 clin.ln4$group<-ifelse(clin.ln4$pLN=="YES","pLN","NoLN")
 
-colnames(SCORES$prec$`M-score`)<-gsub("_HC","",colnames(SCORES$prec$`M-score`))
+colnames(SCORES$prec$`M-Scores`)<-gsub("_HC","",colnames(SCORES$prec$`M-Scores`))
 
 ##······································································· Step 1
 ## Q3: Are the scores capturing the disease clinical heterogeneity
@@ -180,6 +183,4 @@ pheatmap(t(DAT),scale="none",show_colnames = T,cluster_cols = T,
 
 
 save.image(paste0(getwd(),"/RData/ClinicalAssocc.RData"))
-
-
 
