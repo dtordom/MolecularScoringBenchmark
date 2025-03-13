@@ -14,7 +14,7 @@
 ## Set environment ----
 
 
-setwd("D:/Work/BMS/PMPS/PMSPbenchmark")
+setwd("C:/Users/danie/Desktop/WORK/BENCHMARK_25")
 set.seed(1234)
 source(paste0(getwd(),"/code/utils.R"))
 
@@ -27,7 +27,7 @@ check.packages(pkgs); rm(pkgs)
 ## Pascual et. al (GSE65391) ----
 
 ## gene expression for GSE65391 can be also downloaded from GEO using getGEO function
-data<-read.table(file="D:/Work/Update_MyPROSLE/Datasets/GSE65391_expressionData.txt",
+data<-read.table(file=paste0(getwd(),"/Datasets/GSE65391_expressionData.txt"),
                  sep="\t",header=T,row.names = 1)
 
 gset<-getGEO(GEO="GSE65391",GSEMatrix = TRUE)
@@ -308,7 +308,7 @@ rm(D,data,genome,gset,metadata,nonVar.genes,patientInfo,temp,tmp,x,i,j,
 
 
 ## Onset renal manifestation and 
-ren<-read.csv("D:/Work/BMS/PMPS/PMSPbenchmark/Datasets/History1_Biogen_20170731.csv",sep=",")
+ren<-read.csv(paste0(getwd(),"/Datasets/History1_Biogen_20170731.csv"),sep=",")
 ren<-ren[,c("Cohort.ID","Renal.SLE","PROTEINU","PROTN_MO","PROTN_YR","HEMATURI","HEMAT_MO","HEMAT_YR",
             "NEPHROTC","NEPHR_MO","NEPHR_YR","INSUFF","INSUFF_MO","INSUFF_YR","FAILURE","FAIL_MO","FAIL_YR",
             "REBIOPSY","REBX_MO1","REBX_YR1","HISTOL1",
@@ -346,7 +346,7 @@ ren<-ren %>% dplyr::select(Cohort.ID,BX_YR1,HISTOL1,BX_YR2,HISTOL2,BX_YR3,HISTOL
 
 ## Clinical - by Sample
 
-clin<-read.csv("D:/Work/BMS/PMPS/PMSPbenchmark/Datasets/metadataPetri.csv",sep="\t")
+clin<-read.csv(paste0(getwd(),"/Datasets/metadataPetri.csv"),sep="\t")
 clin<-clin[,c("Visit.IDN","CohortID","Date")]
 colnames(clin)<-c("visitID","Cohort.ID","date")
 clin$date<-dates_converted <- format(as.Date(clin$date, format = "%m/%d/%Y"), format = "%Y-%m-%d")
@@ -407,8 +407,7 @@ clin<-clin[!is.na(clin$Selection),c("Cohort.ID","date","BX_YR1","BX_YR2","BX_YR3
 
 
 ## Get sample ID
-matchID<-read.csv("D:/Work/BMS/PMPS/PMSPbenchmark/Datasets/cellFile2sampleID.csv",
-                  sep=";")
+matchID<-read.csv(paste0(getwd(),"/Datasets/cellFile2sampleID.csv"),sep=";")
 matchID<-matchID[!is.na(matchID$Visit_Date),c("Subject_ID","Visit_Date","GZ_Filenames")]
 colnames(matchID)<-c("Cohort.ID","date","sampleID")
 matchID$date<-dates_converted <- format(as.Date(matchID$date, format = "%d/%m/%Y"), format = "%Y-%m-%d")
@@ -474,7 +473,7 @@ rm(clin,CLIN,clinnoren,noren,ren,tmp,dates_converted,i,j,nephrClass,pats,res,
 
 ## Load GeneExpression
 ## Gene expression can be also downloaded from GEO (GSE45291)
-data<-read.csv(file="D:/Work/Update_MyPROSLE/Datasets/PetriALL.txt",
+data<-read.csv(file=paste0(getwd(),"/Datasets/PetriALL.txt"),
                sep="\t",row.names = "GeneSymbol")
 
 ## Preprocessing (Log normalization and filtering non variable genes)
@@ -484,7 +483,7 @@ data<-data[!nonVar.genes$nzv,] ## remove genes with near-zero variance
 colnames(data)<-gsub(pattern = "X",replacement = "",x = colnames(data))
 
 ## Separate Healthy and SLE samples
-clin<-read.csv(file="D:/Work/Update_MyPROSLE/Datasets/Metadata.petri.csv",
+clin<-read.csv(file=paste0(getwd(),"/Datasets/Metadata.petri.csv"),
                sep=";",row.names = "GZ_Filenames")
 
 HC.ln4<-data[,rownames(clin)[clin$Diagnosis=="Healthy"]]
@@ -514,7 +513,7 @@ rm(list=setdiff(ls(),c("clin.ln1","clin.ln2","clin.ln3","clin.ln4",
                        "SLE.ln1","SLE.ln2","SLE.ln3","SLE.ln4",
                        "HC.ln1","HC.ln2","HC.ln3","HC.ln4")))
 
-save.image("D:/Work/BMS/PMPS/PMSPbenchmark/RData/LNDatasets.RData")
+save.image(paste0(getwd(),"/RData/LNDatasets.RData"))
 
 
 ## Plots
