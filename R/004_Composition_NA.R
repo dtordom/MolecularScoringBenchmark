@@ -10,7 +10,7 @@
 ##······································································· Step 0
 ## Set environment
 
-setwd("D:/Work/BMS/PMPS/PMSPbenchmark")
+setwd("C:/Users/danie/Desktop/WORK/BENCHMARK_25")
 set.seed(1234)
 
 load(paste0(getwd(),"/RData/SCORES.RData"))
@@ -20,11 +20,13 @@ source(paste0(getwd(),"/code/utils.R"))
 check.packages(c("vctrs","stats","stringr","caret","singscore","GSVA","parallel","lsa",
                  "metrica","BiocParallel","pbapply","reshape","ggplot2","ggpubr","psych",
                  "jaccard","NbClust","ConsensusClusterPlus","mclust","decoupleR",
-                 "reshape2","qvalue","ggbreak","pheatmap","pathMED","scales","dplyr"))
+                 "reshape2","qvalue","ggbreak","pheatmap","scales","dplyr"))
 
+# devtools::install_local(paste0(getwd(),"/pathMED-main"))
+library("pathMED")
 
 colors <- c("GSVA"="#F4A460",
-            "M-score"="#FF6347",
+            "M-Scores"="#FF6347",
             "Z-score"="#A0522D",
             "ssGSEA"="burlywood4",
             "singscore"="rosybrown3",
@@ -44,7 +46,9 @@ colors <- c("GSVA"="#F4A460",
             "norm_WSUM"="plum",
             "corr_WSUM"="#FFB6C1")
 
-methods<-methods[!grepl("corr",methods)]
+# Remove "corr_" methods
+# methods<-methods[!grepl("corr",methods)]
+
 
 ##······································································· Step 1
 ## Q1. How similar the score results are between them?  
@@ -62,7 +66,7 @@ rownames(Dis.table)<-methods
 
 combinations<-combn(methods,2)
 
-for (pat in 1:ncol(SCORES$prec$`M-score`)){ ## loop by patient
+for (pat in 1:ncol(SCORES$prec$`M-Scores`)){ ## loop by patient
   for(metr in 1:ncol(combinations)){ ## compare metrics
     paths<-intersect(rownames(SCORES$prec[[combinations[1,metr]]]),
                      rownames(SCORES$prec[[combinations[2,metr]]]))
@@ -95,24 +99,23 @@ rm(Dis.table,Cor.table,pat,metr,combinations,x,res,paths)
 ## Use database subsets of 250 pats (to reduce computational time)
 tmp.geneset<-geneset.DB[sample(1:length(geneset.DB),250)]
 
-## Build a small reference (250 paths instead 4.4k paths, to reduce computational time)
+## Build a small reference (250 paths instead 5.1k paths, to reduce computational time)
 REFs<-lapply(methods,function(method){
     cat(paste0("\nRuning ",method,"\n"))
     tmp.SLE<-SLE.prec
     labs<-rep("SLE",ncol(tmp.SLE))
     
-    if(method=="M-score"){ ## Get Mscores also for HC
+    if(method=="M-Scores"){ ## Get Mscores also for HC
       dat<-cbind(tmp.SLE,HC.prec)
       labs<-c(labs,rep("Healthy",ncol(HC.prec)))
     }else{
       dat<-tmp.SLE
     }
-    ncores<-ifelse(method %in% c("M-scores", "MDT", "UDT", "ULM"), 14, 1)
+    ncores<-ifelse(method %in% c("M-Scores", "MDT", "UDT", "ULM"), detectCores()-2, 1)
     
     tmp.scores<-getScores(inputData=dat, geneSets=tmp.geneset, method = method,
-                          labels = labs,cores = ncores, minSize=3,
-                          times =ifelse(grepl("norm",method),100,
-                                        ifelse(grepl("corr",method),200,2)))
+                          labels = labs, returnHC = FALSE, cores = ncores, minSize=3,
+                          times =ifelse(grepl("norm",method),100,2))
     return(tmp.scores)
   })
 names(REFs)<-methods
@@ -130,9 +133,9 @@ Results.cc<-as.data.frame(do.call("rbind",lapply(1:length(sizes),function(i){
   
   res<-as.data.frame(do.call("rbind",lapply(methods,function(method){
     
-    ncores<-ifelse(method %in% c("M-scores", "MDT", "UDT", "ULM"), 14, 1)
+    ncores<-ifelse(method %in% c("M-Scores", "MDT", "UDT", "ULM"), detectCores()-2, 1)
     
-    if(method=="M-score"){ ## Get Mscores also for HC
+    if(method=="M-Scores"){ ## Get Mscores also for HC
       dat<-cbind(tmp.SLE,HC.prec)
       labs<-c(labs,rep("Healthy",ncol(HC.prec)))
     }else{
@@ -140,8 +143,8 @@ Results.cc<-as.data.frame(do.call("rbind",lapply(1:length(sizes),function(i){
     }
     
     tmp.sc<-getScores(inputData=dat, geneSets=tmp.geneset, method=method,
-                      labels=labs, cores=ncores, minSize=3,
-                      times = ifelse(grepl("norm",method),100, ifelse(grepl("corr",method),200,2)))
+                      labels=labs, returnHC = FALSE, cores=ncores, minSize=3,
+                      times = ifelse(grepl("norm",method),100,2))
     
     ## Mean similarity across pair of patient comparisons
     sim.vals<-as.data.frame(do.call("rbind",lapply(1:ncol(tmp.sc),function(pat){
@@ -171,7 +174,7 @@ save.image(paste0(getwd(),"/RData/Results_CC1.RData"))
 library(ggplot2)
 library(dplyr)
 
-Results.cc<-Results.cc[!grepl("corr",Results.cc$method),]
+# Results.cc<-Results.cc[!grepl("corr",Results.cc$method),]
 
 Results.cc$x<-as.numeric(unlist(lapply(1:nrow(Results.cc),function(i){
   round((Results.cc[i,"size"]*100)/ncol(SLE.prec),digits = 0)
@@ -278,24 +281,23 @@ methods<-unique(c(meth.cor,meth.eu))
 ## Use database subsets of 250 pats (to reduce computational time)
 tmp.geneset<-geneset.DB[sample(1:length(geneset.DB),250)]
 
-## Build a small reference (250 paths instead 4.4k paths, to reduce computational time)
+## Build a small reference (250 paths instead 5.1k paths, to reduce computational time)
 REFs<-lapply(methods,function(method){
   cat(paste0("\nRuning ",method,"\n"))
   tmp.SLE<-SLE.prec
   labs<-rep("SLE",ncol(tmp.SLE))
   
-  if(method=="M-score"){ ## Get Mscores also for HC
+  if(method=="M-Scores"){ ## Get Mscores also for HC
     dat<-cbind(tmp.SLE,HC.prec)
     labs<-c(labs,rep("Healthy",ncol(HC.prec)))
   }else{
     dat<-tmp.SLE
   }
-  ncores<-ifelse(method %in% c("M-scores", "MDT", "UDT", "ULM"), 14, 1)
+  ncores<-ifelse(method %in% c("M-Scores", "MDT", "UDT", "ULM"), detectCores()-4, 1)
   
   tmp.scores<-getScores(inputData=dat, geneSets=tmp.geneset, method = method,
-                        labels = labs,cores = ncores, minSize=3,
-                        times =ifelse(grepl("norm",method),100,
-                                      ifelse(grepl("corr",method),200,2)))
+                        labels = labs, returnHC = FALSE, cores = ncores,
+                        minSize=3, times =ifelse(grepl("norm",method),100,2))
   return(tmp.scores)
 })
 names(REFs)<-methods
@@ -304,7 +306,7 @@ names(REFs)<-methods
 ## Select 30-50 samples to use as core of samples / 10% of the samples
 sampleCl<-colnames(SLE.prec)[sample(1:ncol(SLE.prec),50)]
 
-sizes<-rep(trunc(ncol(SLE.prec)*(c(1,5,10,20,30,40,50,60,70,80)/100)),each = 5)
+sizes<-rep(trunc(ncol(SLE.prec)*(c(1,5,10,20,30,40,50,60,70,80)/100)),each = 10)
 
 
 Results.fRate<-as.data.frame(do.call("rbind",lapply(1:length(sizes),function(i){
@@ -316,9 +318,9 @@ Results.fRate<-as.data.frame(do.call("rbind",lapply(1:length(sizes),function(i){
   
   res<-as.numeric(unlist(lapply(methods,function(method){
     
-    ncores<-ifelse(method %in% c("M-scores", "MDT", "UDT", "ULM"), 12, 1)
+    ncores<-ifelse(method %in% c("M-Scores", "MDT", "UDT", "ULM"), detectCores()-4, 1)
     
-    if(method=="M-score"){
+    if(method=="M-Scores"){
       tmp.SLE.m<-cbind(tmp.SLE,HC.prec)
       labs<-c(labs,rep("Healthy",ncol(HC.prec)))
     }else{
@@ -326,8 +328,8 @@ Results.fRate<-as.data.frame(do.call("rbind",lapply(1:length(sizes),function(i){
     }
     
     tmp.sc<-getScores(inputData=tmp.SLE.m, geneSets=tmp.geneset, method=method,
-                      labels=labs, cores=ncores, minSize=3,
-                      times = ifelse(grepl("norm",method),100, ifelse(grepl("corr",method),200,2)))
+                      labels=labs, returnHC = FALSE,cores=ncores, minSize=3,
+                      times = ifelse(grepl("norm",method),100,2))
     
     sharedPaths<-intersect(rownames(tmp.sc),rownames(REFs[[method]]))
     
@@ -417,6 +419,8 @@ rm(list=ls())
 ## Q2: Are the scores influenced by NA in genes? 
 ## Run first 'Step 0', Set Environment, 7, 10, 11, 14
 
+set.seed(1234)
+
 PREC<-SCORES$prec[methods]
 
 remPaths<-unique(c(unlist(lapply(PREC,function(dat){
@@ -486,10 +490,10 @@ Results.NA<-as.data.frame(do.call("rbind",lapply(1:length(subsets),function(i){
     
       
     #print(method)
-    ncores<-ifelse(method %in% c("M-scores", "MDT", "UDT", "ULM"), 12, 1)
+    ncores<-ifelse(method %in% c("M-Scores", "MDT", "UDT", "ULM"), detectCores()-4, 1)
     
     labs <- rep("SLE",ncol(tmp.SLE))
-    if(method=="M-score"){
+    if(method=="M-Scores"){
       tmp.SLE.m<-cbind(tmp.SLE,HC.prec[rownames(tmp.SLE),])
       labs<-c(labs,rep("Healthy",ncol(HC.prec)))
     }else{
@@ -497,8 +501,8 @@ Results.NA<-as.data.frame(do.call("rbind",lapply(1:length(subsets),function(i){
     }
     
     tmp.sc<-getScores(inputData=tmp.SLE.m, geneSets=tmp.geneset, method=method,
-                      labels=labs, cores=ncores, minSize=3,
-                      times = ifelse(grepl("norm",method),100, ifelse(grepl("corr",method),200,2)))
+                      labels=labs, returnHC = FALSE, cores=ncores, minSize=3,
+                      times = ifelse(grepl("norm",method),100, 2))
     
     ## Check valid paths, get Loss pathways
     lossPaths<-rownames(tmp.sc)[(apply(tmp.sc, 1, function(row) any(is.na(row) | is.infinite(row)))) | 
