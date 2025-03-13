@@ -10,7 +10,7 @@
 ##······································································· Step 0
 ## Set environment
 
-setwd("D:/Work/BMS/PMPS/PMSPbenchmark")
+setwd("C:/Users/danie/Desktop/WORK/BENCHMARK_25")
 set.seed(1234)
 
 source(paste0(getwd(),"/code/utils.R"))
@@ -18,13 +18,16 @@ source(paste0(getwd(),"/code/utils.R"))
 check.packages(c("vctrs","stats","stringr","caret","singscore","GSVA","parallel","lsa",
                  "metrica","BiocParallel","pbapply","reshape","ggplot2","ggpubr","psych",
                  "jaccard","NbClust","ConsensusClusterPlus","mclust","decoupleR",
-                 "reshape2","qvalue","ggbreak","pheatmap","pathMED","scales"))
+                 "reshape2","qvalue","ggbreak","pheatmap","scales"))
 
+## Load pathMED locally
+# devtools::install_local(paste0(getwd(),"/pathMED-main"))
+library("pathMED")
 
-load("D:/Work/BMS/PMPS/PMSPbenchmark/RData/SCORES.RData")
+load(paste0(getwd(),"/RData/SCORES.RData"))
 
 colors <- c("GSVA"="#F4A460",
-            "M-score"="#FF6347",
+            "M-Scores"="#FF6347",
             "Z-score"="#A0522D",
             "ssGSEA"="burlywood4",
             "singscore"="rosybrown3",
@@ -50,28 +53,31 @@ colors <- c("GSVA"="#F4A460",
 
 db.length<-c(1,3,5,10,15,25,50,75,100,250,500,750,1000,1250,1500)
 cohort.size<-c(2,3,5,10,15,25,50,75,100,150,250,300,400,500,600)
+
+# Remove "corr_" methods
+# methods<-methods[!grepl(pattern = "corr_",methods)]
   
 ## Get times for different input (sample size, database length)
 Results.cp1<-as.data.frame(do.call("rbind",lapply(1:length(db.length),function(i){
 
   ## Prepare data
-  if(cohort.size[i]>ncol(SLE.prec)){
+  if(cohort.size[i] > ncol(SLE.prec)){
     data.tmp<-data.frame(cbind(SLE.prec,SLE.prec))
   }else{
     data.tmp<-SLE.prec
   }
   
   genesetDB.rd<-geneset.DB[sample(1:length(geneset.DB),db.length[i])]
-  genesetDB.200<-geneset.DB[1:100]
+  genesetDB.100<-geneset.DB[1:100]
   data.sub.rd<-data.tmp[,sample(1:ncol(data.tmp),cohort.size[i]),drop=FALSE]
   data.sub.50<-SLE.prec[,1:50,drop=FALSE]
   
   
   times<-as.data.frame(do.call("rbind",lapply(methods,function(method){
     
-    ncores<-ifelse(method %in% c("M-scores", "MDT", "UDT", "ULM"), 12, 1)
+    ncores<-ifelse(method %in% c("M-Scores", "MDT", "UDT", "ULM"), detectCores()-2, 1)
     
-    if(method=="M-score"){ ## Get Mscores also for HC
+    if(method=="M-Scores"){ ## Hc was needed for M-Scores
       data.sub.rd.m<-cbind(data.sub.rd,HC.prec)
       labs.sub.rd.m<-c(rep("SLE",ncol(data.sub.rd)),rep("Healthy",ncol(HC.prec)))
       
@@ -82,19 +88,18 @@ Results.cp1<-as.data.frame(do.call("rbind",lapply(1:length(db.length),function(i
       data.sub.50.m<-data.sub.50
     }
     
-    ## Pathways
     startTime <- Sys.time()
     tmp<-getScores(inputData=data.sub.50.m, geneSets=genesetDB.rd, method = method,
-                   labels = labs.sub.50.m, cores = ncores, minSize=3, 
-                   times=ifelse(grepl("norm",method),100,ifelse(grepl("corr",method),200,2)))
+                   labels = labs.sub.50.m,returnHC = FALSE, cores = ncores, minSize=3, 
+                   times=ifelse(grepl("norm",method),100,2))
     finalTime<-as.numeric(difftime(Sys.time(),startTime,units = "min")) 
     gc()
     
     ## Patients
     startTime <- Sys.time()
-    tmp<-getScores(inputData=data.sub.rd.m,geneSets=genesetDB.200, method = method,
-                   labels = labs.sub.rd.m, cores = ncores, minSize=3, 
-                   times=ifelse(grepl("norm",method),100,ifelse(grepl("corr",method),200,2)))
+    tmp<-getScores(inputData=data.sub.rd.m,geneSets=genesetDB.100, method = method,
+                   labels = labs.sub.rd.m, returnHC = FALSE, cores = ncores, minSize=3, 
+                   times=ifelse(grepl("norm",method),100,2))
     finalTime<-c(finalTime,as.numeric(difftime(Sys.time(),startTime,units = "min")))
     names(finalTime)<-c("time.db","time.size")
     gc()
@@ -108,7 +113,7 @@ Results.cp1<-as.data.frame(do.call("rbind",lapply(1:length(db.length),function(i
   return(times)
 })))
 
-save.image("D:/Work/BMS/PMPS/PMSPbenchmark/RData/CompTime1_1c.RData")
+save.image(paste0(getwd(),"/RData/CompTime1_1c.RData"))
 
 
 ##······································································· Step 2
@@ -125,9 +130,9 @@ Results.cp2<-as.data.frame(do.call("rbind",lapply(sizes,function(sz){
   
   times<-as.numeric(lapply(methods,function(method){
     
-    ncores<-ifelse(method %in% c("M-scores", "MDT", "UDT", "ULM"), 12, 1)
+    ncores<-ifelse(method %in% c("M-Scores", "MDT", "UDT", "ULM"), detectCores()-2, 1)
     
-    if(method=="M-score"){ ## Get Mscores also for HC
+    if(method=="M-Scores"){ ## Hc was needed for M-Scores
       data.sub.50.m<-cbind(data.sub.50,HC.prec)
       labs.sub.50.m<-c(rep("SLE",ncol(data.sub.50)),rep("Healthy",ncol(HC.prec)))
     }else{
@@ -136,8 +141,8 @@ Results.cp2<-as.data.frame(do.call("rbind",lapply(sizes,function(sz){
     
     startTime <- Sys.time()
     tmp<-getScores(inputData=data.sub.50.m, geneSets=geneset.rd, method = method,
-                   labels = labs.sub.50.m, cores = ncores, minSize=3, 
-                   times=ifelse(grepl("norm",method),100,ifelse(grepl("corr",method),200,2)))
+                   labels = labs.sub.50.m, returnHC = FALSE, cores = ncores, minSize=3, 
+                   times=ifelse(grepl("norm",method),100,2))
     finalTime<-as.numeric(difftime(Sys.time(),startTime,units = "min")) 
     gc()
     return(finalTime)
@@ -147,8 +152,7 @@ Results.cp2<-as.data.frame(do.call("rbind",lapply(sizes,function(sz){
   return(res)
 })))
 
-save.image("D:/Work/BMS/PMPS/PMSPbenchmark/RData/CompTime1_1c.RData")
-
+save.image(paste0(getwd(),"/RData/CompTime1_1c.RData"))
 
 ##······································································· Step 3
 ## Get Plots ----
@@ -220,11 +224,3 @@ plot(p3)
 ggarrange(p1,p2,p3,ncol=3,nrow=1,common.legend = T,legend = "bottom",
           labels = c("A)", "B)", "C)"),
           font.label = list(size = 12, color = "black", face = "bold"))
-
-
-
-
-
-
-
-
