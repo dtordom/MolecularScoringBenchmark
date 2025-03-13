@@ -10,7 +10,7 @@
 ##······································································· Step 0
 ## Set environment
 
-setwd("D:/Work/BMS/PMPS/PMSPbenchmark")
+setwd("C:/Users/danie/Desktop/WORK/BENCHMARK_25")
 set.seed(1234)
 
 load(paste0(getwd(),"/RData/SCORES.RData"))
@@ -20,12 +20,15 @@ source(paste0(getwd(),"/code/utils.R"))
 check.packages(c("vctrs","stats","stringr","caret","singscore","GSVA","parallel","lsa",
                  "metrica","BiocParallel","pbapply","reshape","ggplot2","ggpubr","psych",
                  "jaccard","NbClust","ConsensusClusterPlus","mclust","decoupleR",
-                 "reshape2","qvalue","ggbreak","pheatmap","pathMED","scales","dplyr",
+                 "reshape2","qvalue","ggbreak","pheatmap","scales","dplyr",
                  "cluster"))
 
+## Load pathMED locally
+# devtools::install_local(paste0(getwd(),"/pathMED-main"))
+library("pathMED")
 
 colors <- c("GSVA"="#F4A460",
-            "M-score"="#FF6347",
+            "M-Scores"="#FF6347",
             "Z-score"="#A0522D",
             "ssGSEA"="burlywood4",
             "singscore"="rosybrown3",
@@ -45,7 +48,7 @@ colors <- c("GSVA"="#F4A460",
             "norm_WSUM"="plum",
             "corr_WSUM"="#FFB6C1")
 
-methods<-methods[!grepl("corr",methods)]
+#methods<-methods[!grepl("corr",methods)]
 
 clin.ln1$group<-ifelse(clin.ln1$NeprBX=="Proliferative","pLN","NoLN")
 clin.ln2$group<-ifelse(clin.ln2$LN=="YES","pLN","NoLN")
@@ -53,10 +56,10 @@ clin.ln3$group<-ifelse(clin.ln3$pLN=="YES","pLN","NoLN")
 clin.ln4$group<-ifelse(clin.ln4$pLN=="YES","pLN","NoLN")
 
 ## Fix colnames
-colnames(SCORES$ln1$`M-score`)<-gsub("_HC","",colnames(SCORES$ln1$`M-score`))
-colnames(SCORES$ln2$`M-score`)<-gsub("_HC","",colnames(SCORES$ln2$`M-score`))
-colnames(SCORES$ln3$`M-score`)<-gsub("_HC","",colnames(SCORES$ln3$`M-score`))
-colnames(SCORES$ln4$`M-score`)<-gsub("_HC","",colnames(SCORES$ln4$`M-score`))
+colnames(SCORES$ln1$`M-Scores`)<-gsub("_HC","",colnames(SCORES$ln1$`M-Scores`))
+colnames(SCORES$ln2$`M-Scores`)<-gsub("_HC","",colnames(SCORES$ln2$`M-Scores`))
+colnames(SCORES$ln3$`M-Scores`)<-gsub("_HC","",colnames(SCORES$ln3$`M-Scores`))
+colnames(SCORES$ln4$`M-Scores`)<-gsub("_HC","",colnames(SCORES$ln4$`M-Scores`))
 
 
 ##······································································· Step 0
@@ -153,12 +156,12 @@ RESULTS.BE<-lapply(1:length(DATA),function(d){
   
   
   ## Remove outliers
-  outliers <- apply(scale(D[,c("PC1","PC2")]), 1, function(row) any(abs(row) > 3))
-  print(table(outliers))
-  D<-D[!outliers,]
-  if(names(DATA)[d]=="norm_WMEAN" | names(DATA)[d]=="norm_WSUM"){
-    D<-D[D$PC1<0 & D$PC2>-6000,]
-  }
+  # outliers <- apply(scale(D[,c("PC1","PC2")]), 1, function(row) any(abs(row) > 3))
+  # print(table(outliers))
+  # D<-D[!outliers,]
+  # if(names(DATA)[d]=="norm_WMEAN" | names(DATA)[d]=="norm_WSUM"){
+  #   D<-D[D$PC1<0 & D$PC2>-6000,]
+  # }
   
   p1<-ggplot(D,aes(x=PC1,y=PC2,fill=Dataset)) + theme_classic() + geom_point(shape=21,size=0.8,color="black",stroke=0.1)+
     theme(legend.text = element_text(size=7),
@@ -250,10 +253,5 @@ ggplot(m, aes(x = value,
     legend.position = "bottom"
   ) +
   scale_fill_manual(values = c("Nephritis" = "steelblue4", "Dataset" = "grey"))
-
-
-
-
-
 
 
